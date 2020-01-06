@@ -19,6 +19,9 @@ III) Conformance
 IV) First class support for determistic applications (*blockchain*)
 - Support the bigint API
 - Support runtime metering in the interpreter
+- Support enforcing a call depth bound
+
+Also pay attention to [the caveats](./CAVEATS.md).
 
 ## License
 
