@@ -39,6 +39,7 @@ parser_result<uint8_t> parse_blocktype(const uint8_t* pos, const uint8_t* end)
     if (pos == end)
         throw parser_error{"Unexpected EOF"};
 
+    // TODO: use parse_byte here?
     const uint8_t type{*pos};
 
     if (type == BlockTypeEmpty)
@@ -63,6 +64,7 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
         if (pos == end)
             throw parser_error{"Unexpected EOF"};
 
+        // TODO: use parse_byte here?
         const auto instr = static_cast<Instr>(*pos++);
         switch (instr)
         {
