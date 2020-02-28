@@ -15,7 +15,7 @@ struct execution_result
     bool trapped;
     // the resulting stack (e.g. return values)
     // NOTE: this can be either 0 or 1 items
-    std::vector<uint64_t> stack;
+    std::optional<uint64_t> result;
 };
 
 struct Instance;

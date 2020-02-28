@@ -108,14 +108,14 @@ public:
                     const auto& expected = cmd.at("expected");
                     if (expected.empty())
                     {
-                        if (result->stack.empty())
+                        if (!result->result.has_value())
                             pass();
                         else
                             fail("Unexpected returned value.");
                         continue;
                     }
 
-                    if (result->stack.size() != 1)
+                    if (!result->result.has_value())
                     {
                         fail("More than 1 value returned.");
                         continue;
@@ -133,7 +133,7 @@ public:
                         continue;
                     }
 
-                    const uint64_t actual_value = result->stack[0];
+                    const uint64_t actual_value = *result->result;
                     if (expected_value != actual_value)
                     {
                         std::stringstream message;
