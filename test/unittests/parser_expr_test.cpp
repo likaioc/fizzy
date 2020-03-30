@@ -21,21 +21,25 @@ TEST(parser, instr_loop)
     const auto [code1, pos1] = parse_expr(loop_void_empty);
     EXPECT_EQ(code1.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code1.immediates.size(), 0);
+    EXPECT_EQ(code1.max_stack_height, 0);
 
     const auto loop_i32_empty = "037f0b0b"_bytes;
     const auto [code2, pos2] = parse_expr(loop_i32_empty);
     EXPECT_EQ(code2.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code2.immediates.size(), 0);
+    EXPECT_EQ(code2.max_stack_height, 0);
 
     const auto loop_f32_empty = "037d0b0b"_bytes;
     const auto [code3, pos3] = parse_expr(loop_f32_empty);
     EXPECT_EQ(code3.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code3.immediates.size(), 0);
+    EXPECT_EQ(code3.max_stack_height, 0);
 
     const auto loop_f64_empty = "037d0b0b"_bytes;
     const auto [code4, pos4] = parse_expr(loop_f64_empty);
     EXPECT_EQ(code4.instructions, (std::vector{Instr::loop, Instr::end, Instr::end}));
     EXPECT_EQ(code4.immediates.size(), 0);
+    EXPECT_EQ(code4.max_stack_height, 0);
 }
 
 TEST(parser, instr_loop_input_buffer_overflow)
@@ -111,6 +115,7 @@ TEST(parser, block_br)
         "0b000000"
         "01000000"
         "01000000"_bytes);
+    EXPECT_EQ(code.max_stack_height, 1);
 }
 
 TEST(parser, instr_br_table)
@@ -159,6 +164,7 @@ TEST(parser, instr_br_table)
         "00000000"
         "04000000"_bytes;
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
+    EXPECT_EQ(code.max_stack_height, 5);  // FIXME: This is too high.
 }
 
 TEST(parser, instr_br_table_empty_vector)
@@ -185,6 +191,7 @@ TEST(parser, instr_br_table_empty_vector)
         "00000000"
         "00000000"_bytes;
     EXPECT_EQ(code.immediates.substr(br_table_imm_offset, expected_br_imm.size()), expected_br_imm);
+    EXPECT_EQ(code.max_stack_height, 1);
 }
 
 TEST(parser, unexpected_else)

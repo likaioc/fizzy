@@ -73,6 +73,8 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
 
     control_stack.push({Instr::block});  // The function's implicit block.
 
+    int func_stack_height = 0;
+
     const auto metrics_table = get_instruction_metrics_table();
 
     bool continue_parsing = true;
@@ -90,6 +92,10 @@ parser_result<Code> parse_expr(const uint8_t* pos, const uint8_t* end, bool have
             throw validation_error{"stack underflow"};
 
         frame.stack_height += metrics.stack_height_change;
+
+        if (!frame.unreachable)
+            func_stack_height += metrics.stack_height_change;
+        code.max_stack_height = std::max(code.max_stack_height, func_stack_height);
 
         const auto instr = static_cast<Instr>(opcode);
         switch (instr)
