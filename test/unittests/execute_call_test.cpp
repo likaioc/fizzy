@@ -387,3 +387,25 @@ TEST(execute, call_max_depth)
     EXPECT_RESULT(execute(*instance, 0, {}, 2048), 42);
     EXPECT_TRUE(execute(*instance, 1, {}, 2048).trapped);
 }
+
+TEST(execute, call_imported_infinite_recursion)
+{
+    /* wat2wasm
+    (import "mod" "foo" (func (result i32)))
+    (func (result i32)
+      call 0
+    )
+    */
+    const auto wasm = from_hex(
+        "0061736d010000000105016000017f020b01036d6f6403666f6f0000030201000a0601040010000b");
+
+    const auto module = parse(wasm);
+    auto host_foo = [](Instance& instance, std::vector<uint64_t>) -> execution_result {
+        return execute(instance, 0, {});
+    };
+    const auto host_foo_type = module.typesec[0];
+
+    auto instance = instantiate(module, {{host_foo, host_foo_type}});
+
+    EXPECT_TRUE(execute(*instance, 0, {}).trapped);
+}
