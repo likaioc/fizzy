@@ -561,21 +561,9 @@ std::unique_ptr<Instance> instantiate(Module module,
     // Allocate memory
     auto [memory, memory_max] = allocate_memory(module.memorysec, imported_memories);
 
-    // Fill the table based on elements segment
-    assert(module.elementsec.empty() || table != nullptr);
-    for (const auto& element : module.elementsec)
-    {
-        const uint64_t offset =
-            eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
-
-        if (offset + element.init.size() > table->size())
-            throw instantiate_error("Element segment is out of table bounds");
-
-        // Overwrite table[offset..] with element.init
-        std::copy(element.init.begin(), element.init.end(), table->data() + offset);
-    }
-
-    // Fill out memory based on data segments
+    // Before starting to fill memory and table,
+    // check that data and element segments are within bounds.
+    std::vector<uint64_t> datasec_offsets;
     for (const auto& data : module.datasec)
     {
         const uint64_t offset =
@@ -584,16 +572,54 @@ std::unique_ptr<Instance> instantiate(Module module,
         if (offset + data.init.size() > memory->size())
             throw instantiate_error("Data segment is out of memory bounds");
 
-        // NOTE: these instructions can overlap
-        std::memcpy(memory->data() + offset, data.init.data(), data.init.size());
+        datasec_offsets.emplace_back(offset);
     }
 
+    assert(module.elementsec.empty() || table != nullptr);
+    std::vector<ptrdiff_t> elementsec_offsets;
+    for (const auto& element : module.elementsec)
+    {
+        const uint64_t offset =
+            eval_constant_expression(element.offset, imported_globals, module.globalsec, globals);
+
+        if (offset + element.init.size() > table->size())
+            throw instantiate_error("Element segment is out of table bounds");
+
+        elementsec_offsets.emplace_back(offset);
+    }
+
+    // Fill out memory based on data segments
+    for (size_t i = 0; i < module.datasec.size(); ++i)
+    {
+        // NOTE: these instructions can overlap
+        std::memcpy(memory->data() + datasec_offsets[i], module.datasec[i].init.data(),
+            module.datasec[i].init.size());
+    }
+
+    // We need to create instance before filling table,
+    // because table functions will capture the pointer to instance.
     // FIXME: clang-tidy warns about potential memory leak for moving memory (which is in fact
     // safe), but also erroneously points this warning to std::move(table)
     auto instance = std::make_unique<Instance>(std::move(module), std::move(memory), memory_max,
         // NOLINTNEXTLINE(clang-analyzer-cplusplus.NewDeleteLeaks)
         std::move(table), std::move(globals), std::move(imported_functions),
         std::move(imported_globals));
+
+    // Fill the table based on elements segment
+    for (size_t i = 0; i < instance->module.elementsec.size(); ++i)
+    {
+        // Overwrite table[offset..] with element.init
+        auto it_table = instance->table->begin() + elementsec_offsets[i];
+        for (const auto idx : instance->module.elementsec[i].init)
+        {
+            auto func = [idx, &instance_ref = *instance](
+                            fizzy::Instance&, std::vector<uint64_t> args, int depth) {
+                return execute(instance_ref, idx, std::move(args), depth);
+            };
+
+            *it_table++ = ExternalFunction{std::move(func), function_type(*instance, idx)};
+        }
+    }
 
     // Run start function if present
     if (instance->module.startfunc)
@@ -776,15 +802,15 @@ execution_result execute(
                 goto end;
             }
 
-            const auto called_func_idx = (*instance.table)[elem_idx];
-            if (!called_func_idx.has_value())
+            const auto called_func = (*instance.table)[elem_idx];
+            if (!called_func.has_value())
             {
                 trap = true;
                 goto end;
             }
 
             // check actual type against expected type
-            const auto& actual_type = function_type(instance, *called_func_idx);
+            const auto& actual_type = called_func->type;
             const auto& expected_type = instance.module.typesec[expected_type_idx];
             if (expected_type != actual_type)
             {
@@ -792,11 +818,27 @@ execution_result execute(
                 goto end;
             }
 
-            if (!invoke_function(actual_type, *called_func_idx, instance, stack, depth))
+            const auto num_args = actual_type.inputs.size();
+            assert(stack.size() >= num_args);
+            std::vector<uint64_t> call_args(
+                stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
+            stack.resize(stack.size() - num_args);
+
+            const auto ret = called_func->function(instance, std::move(call_args), depth + 1);
+            // Bubble up traps
+            if (ret.trapped)
             {
                 trap = true;
                 goto end;
             }
+
+            const auto num_outputs = actual_type.outputs.size();
+            // NOTE: we can assume these two from validation
+            assert(ret.stack.size() == num_outputs);
+            assert(num_outputs <= 1);
+            // Push back the result
+            if (num_outputs != 0)
+                stack.push(ret.stack[0]);
             break;
         }
         case Instr::return_:
