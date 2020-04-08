@@ -373,7 +373,7 @@ TEST(execute_call, call_indirect_infinite_recursion)
     EXPECT_TRUE(execute(module, 0, {}).trapped);
 }
 
-TEST(execute, call_max_depth)
+TEST(execute_call, call_max_depth)
 {
     /* wat2wasm
     (func (result i32) (i32.const 42))
@@ -389,7 +389,7 @@ TEST(execute, call_max_depth)
     EXPECT_TRUE(execute(*instance, 1, {}, 2048).trapped);
 }
 
-TEST(execute, call_imported_infinite_recursion)
+TEST(execute_call, call_imported_infinite_recursion)
 {
     /* wat2wasm
     (import "mod" "foo" (func (result i32)))
