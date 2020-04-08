@@ -286,8 +286,8 @@ uint64_t eval_constant_expression(ConstantExpression expr,
         return globals[global_idx - imported_globals.size()];
 }
 
-void branch(uint32_t label_idx, Stack<LabelContext>& labels, Stack<uint64_t>& stack,
-    const Instr*& pc, const uint8_t*& immediates) noexcept
+void branch(uint32_t label_idx, Stack<LabelContext>& labels, OperandStack& stack, const Instr*& pc,
+    const uint8_t*& immediates) noexcept
 {
     assert(labels.size() > label_idx);
     labels.drop(label_idx);  // Drop skipped labels (does nothing for labelidx == 0).
@@ -323,15 +323,20 @@ const FuncType& function_type(const Instance& instance, FuncIdx idx)
 }
 
 bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& instance,
-    Stack<uint64_t>& stack, int depth)
+    OperandStack& stack, int depth)
 {
     if (depth == CallStackLimit)
         return false;
 
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    std::vector<uint64_t> call_args(stack.end() - static_cast<ptrdiff_t>(num_args), stack.end());
-    stack.shrink(stack.size() - num_args);
+    std::vector<uint64_t> call_args;
+    if (num_args != 0)
+    {
+        call_args.reserve(num_args);
+        std::copy_n(&stack[num_args - 1], num_args, std::back_inserter(call_args));
+        stack.shrink(stack.size() - num_args);
+    }
 
     const auto ret = execute(instance, func_idx, std::move(call_args), depth + 1);
     // Bubble up traps
@@ -385,7 +390,7 @@ inline DstT extend(SrcT in) noexcept
 }
 
 template <typename DstT, typename SrcT = DstT>
-inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
+inline bool load_from_memory(bytes_view memory, OperandStack& stack, const uint8_t*& immediates)
 {
     const auto address = static_cast<uint32_t>(stack.pop());
     // NOTE: alignment is dropped by the parser
@@ -400,7 +405,7 @@ inline bool load_from_memory(bytes_view memory, Stack<uint64_t>& stack, const ui
 }
 
 template <typename DstT>
-inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8_t*& immediates)
+inline bool store_into_memory(bytes& memory, OperandStack& stack, const uint8_t*& immediates)
 {
     const auto value = static_cast<DstT>(stack.pop());
     const auto address = static_cast<uint32_t>(stack.pop());
@@ -415,7 +420,7 @@ inline bool store_into_memory(bytes& memory, Stack<uint64_t>& stack, const uint8
 }
 
 template <typename Op>
-inline void unary_op(Stack<uint64_t>& stack, Op op) noexcept
+inline void unary_op(OperandStack& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop()));
     const auto a = static_cast<T>(stack.pop());
@@ -423,7 +428,7 @@ inline void unary_op(Stack<uint64_t>& stack, Op op) noexcept
 }
 
 template <typename Op>
-inline void binary_op(Stack<uint64_t>& stack, Op op) noexcept
+inline void binary_op(OperandStack& stack, Op op) noexcept
 {
     using T = decltype(op(stack.pop(), stack.pop()));
     const auto val2 = static_cast<T>(stack.pop());
@@ -432,7 +437,7 @@ inline void binary_op(Stack<uint64_t>& stack, Op op) noexcept
 }
 
 template <typename T, template <typename> class Op>
-inline void comparison_op(Stack<uint64_t>& stack, Op<T> op) noexcept
+inline void comparison_op(OperandStack& stack, Op<T> op) noexcept
 {
     const auto val2 = static_cast<T>(stack.pop());
     const auto val1 = static_cast<T>(stack.pop());
@@ -645,8 +650,7 @@ execution_result execute(
     std::vector<uint64_t> locals = std::move(args);
     locals.resize(locals.size() + code.local_count);
 
-    // TODO: preallocate fixed stack depth properly
-    Stack<uint64_t> stack;
+    OperandStack stack{static_cast<size_t>(code.max_stack_height)};
 
     Stack<LabelContext> labels;
 
@@ -833,11 +837,11 @@ execution_result execute(
             if (have_result)
             {
                 const auto result = stack.top();
-                stack.clear();
+                stack.shrink(0);
                 stack.push(result);
             }
             else
-                stack.clear();
+                stack.shrink(0);
 
             goto end;
         }
@@ -1553,8 +1557,10 @@ execution_result execute(
 
 end:
     assert(labels.empty() || trap);
-    // move allows to return derived Stack<uint64_t> instance into base vector<uint64_t> value
-    return {trap, std::move(stack)};
+    // move allows to return derived OperandStack instance into base vector<uint64_t> value
+    return {trap, stack.size() != 0 ?
+                      std::vector<uint64_t>{&stack[stack.size() - 1], &stack[0] + 1} :
+                      std::vector<uint64_t>{}};
 }
 
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
