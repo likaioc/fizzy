@@ -676,13 +676,13 @@ execution_result execute(
             const auto target_imm = read<uint32_t>(immediates);
             LabelContext label{code.instructions.data() + target_pc,
                 code.immediates.data() + target_imm, arity, stack.size()};
-            labels.emplace_back(label);
+            labels.push(label);
             break;
         }
         case Instr::loop:
         {
             LabelContext label{pc - 1, immediates, 0, stack.size()};  // Target this instruction.
-            labels.push_back(label);
+            labels.push(label);
             break;
         }
         case Instr::if_:
@@ -697,7 +697,7 @@ execution_result execute(
 
                 LabelContext label{code.instructions.data() + target_pc,
                     code.immediates.data() + target_imm, arity, stack.size()};
-                labels.emplace_back(label);
+                labels.push(label);
             }
             else
             {
@@ -708,7 +708,7 @@ execution_result execute(
                 {
                     LabelContext label{code.instructions.data() + target_pc,
                         code.immediates.data() + target_imm, arity, stack.size()};
-                    labels.emplace_back(label);
+                    labels.push(label);
                     pc = code.instructions.data() + target_else_pc;
                     immediates = code.immediates.data() + target_else_imm;
                 }
@@ -735,7 +735,7 @@ execution_result execute(
         case Instr::end:
         {
             if (!labels.empty())
-                labels.pop_back();
+                labels.pop();
             else
                 goto end;
             break;

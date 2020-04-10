@@ -8,38 +8,31 @@
 namespace fizzy
 {
 template <typename T>
-class Stack : public std::vector<T>
+class Stack : private std::vector<T>
 {
 public:
-    using difference_type = typename std::vector<T>::difference_type;
-
-    using std::vector<T>::vector;
-
-    using std::vector<T>::back;
-    using std::vector<T>::emplace_back;
-    using std::vector<T>::pop_back;
-    using std::vector<T>::resize;
+    using std::vector<T>::clear;
+    using std::vector<T>::empty;
     using std::vector<T>::size;
 
-    // Also used: size(), resize(), clear(), empty(), end()
+    /// Push an item to the stack.
+    void push(T val) { std::vector<T>::emplace_back(val); }
 
-    void push(T val) { emplace_back(val); }
+    /// Returns the reference to the top item on the stack.
+    ///
+    /// This is not currently in use (except unit tests), but left as is classic stack method.
+    T& top() noexcept { return std::vector<T>::back(); }
 
+    /// Pops an item from the top of the stack and returns it.
     T pop()
     {
-        const auto res = back();
-        pop_back();
+        const auto res = top();
+        std::vector<T>::pop_back();
         return res;
     }
 
-    T& operator[](size_t index) noexcept { return std::vector<T>::operator[](size() - index - 1); }
-
-    T& top() noexcept { return (*this)[0]; }
-
     /// Drops @a num_elements elements from the top of the stack.
-    void drop(size_t num_elements = 1) noexcept { resize(size() - num_elements); }
-
-    void shrink(size_t new_size) noexcept { resize(new_size); }
+    void drop(size_t num_elements) noexcept { std::vector<T>::resize(size() - num_elements); }
 };
 
 class OperandStack
