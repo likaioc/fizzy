@@ -354,13 +354,14 @@ inline parser_result<code_view> parse(const uint8_t* pos, const uint8_t* end)
     return {{code_begin, code_size}, code_end};
 }
 
-inline Code parse_code(code_view code_binary, bool have_memory)
+inline Code parse_code(
+    code_view code_binary, bool have_memory, const std::vector<FuncType>& function_types)
 {
     const auto begin = code_binary.begin();
     const auto end = code_binary.end();
     const auto [locals_vec, pos1] = parse_vec<Locals>(begin, end);
 
-    auto [code, pos2] = parse_expr(pos1, end, have_memory);
+    auto [code, pos2] = parse_expr(pos1, end, have_memory, function_types);
 
     // Size is the total bytes of locals and expressions.
     if (pos2 != end)
@@ -518,23 +519,34 @@ Module parse(bytes_view input)
     if (module.funcsec.size() != code_binaries.size())
         throw parser_error("malformed binary: number of function and code entries must match");
 
-    const auto imported_func_count = std::count_if(module.importsec.begin(), module.importsec.end(),
-        [](const auto& import) noexcept { return import.kind == ExternalKind::Function; });
-    const auto total_func_count = static_cast<size_t>(imported_func_count) + module.funcsec.size();
+    std::vector<FuncType> function_types;
+    for (const auto& import : module.importsec)
+    {
+        if (import.kind == ExternalKind::Function)
+        {
+            const auto func_type_index = import.desc.function_type_index;
+            if (func_type_index >= module.typesec.size())
+                throw validation_error{"invalid imported function type index"};
 
-    if (module.startfunc && *module.startfunc >= total_func_count)
+            function_types.emplace_back(module.typesec[func_type_index]);
+        }
+    }
+    for (const auto& func_type_index : module.funcsec)
+    {
+        if (func_type_index >= module.typesec.size())
+            throw validation_error{"invalid function type index"};
+
+        function_types.emplace_back(module.typesec[func_type_index]);
+    }
+
+    if (module.startfunc && *module.startfunc >= function_types.size())
         throw parser_error{"invalid start function index"};
 
     const auto have_memory = !module.memorysec.empty() || imported_mem_count != 0;
     // Process code. TODO: This can be done lazily.
     module.codesec.reserve(code_binaries.size());
     for (size_t i = 0; i < code_binaries.size(); ++i)
-    {
-        const auto type_idx = module.funcsec[i];
-        if (type_idx >= module.typesec.size())
-            throw validation_error{"invalid function type index"};
-        module.codesec.emplace_back(parse_code(code_binaries[i], have_memory));
-    }
+        module.codesec.emplace_back(parse_code(code_binaries[i], have_memory, function_types));
 
     return module;
 }

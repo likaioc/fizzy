@@ -107,7 +107,7 @@ TEST(validation_stack, loop_with_result_stack_underflow)
     EXPECT_THROW_MESSAGE(parse(wasm), validation_error, "stack underflow");
 }
 
-TEST(validation_stack, DISABLED_call_stack_underflow)
+TEST(validation_stack, call_stack_underflow)
 {
     /* wat2wasm --no-check
     (func $f (param i32) (result i32)
