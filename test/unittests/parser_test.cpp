@@ -371,7 +371,7 @@ TEST(parser, import_memories_multiple)
     const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
 
     EXPECT_THROW_MESSAGE(
-        parse(bin), parser_error, "too many imported memories (at most one is allowed)");
+        parse(bin), validation_error, "too many imported memories (at most one is allowed)");
 }
 
 TEST(parser, import_invalid_kind)
@@ -410,7 +410,7 @@ TEST(parser, memory_and_imported_memory)
     const auto memory_section = "05030100010008046e616d65020100"_bytes;
     const auto bin = bytes{wasm_prefix} + import_section + memory_section;
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error,
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
         "both module memory and imported memory are defined (at most one of them is allowed)");
 }
 
@@ -422,7 +422,7 @@ TEST(parser, import_tables_multiple)
     const auto bin = bytes{wasm_prefix} + make_section(2, section_contents);
 
     EXPECT_THROW_MESSAGE(
-        parse(bin), parser_error, "too many imported tables (at most one is allowed)");
+        parse(bin), validation_error, "too many imported tables (at most one is allowed)");
 }
 
 TEST(parser, table_and_imported_table)
@@ -433,7 +433,7 @@ TEST(parser, table_and_imported_table)
     const auto table_section = "0404017000020008046e616d65020100"_bytes;
     const auto bin = bytes{wasm_prefix} + import_section + table_section;
 
-    EXPECT_THROW_MESSAGE(parse(bin), parser_error,
+    EXPECT_THROW_MESSAGE(parse(bin), validation_error,
         "both module table and imported table are defined (at most one of them is allowed)");
 }
 
@@ -562,7 +562,7 @@ TEST(parser, table_multi_min_limit)
     const auto bin = bytes{wasm_prefix} + make_section(4, section_contents);
 
     EXPECT_THROW_MESSAGE(
-        parse(bin), parser_error, "too many table sections (at most one is allowed)");
+        parse(bin), validation_error, "too many table sections (at most one is allowed)");
 }
 
 TEST(parser, table_invalid_elemtype)
@@ -621,7 +621,7 @@ TEST(parser, memory_multi_min_limit)
     const auto bin = bytes{wasm_prefix} + make_section(5, section_contents);
 
     EXPECT_THROW_MESSAGE(
-        parse(bin), parser_error, "too many memory sections (at most one is allowed)");
+        parse(bin), validation_error, "too many memory sections (at most one is allowed)");
 }
 
 TEST(parser, memory_limits_kind_out_of_bounds)
