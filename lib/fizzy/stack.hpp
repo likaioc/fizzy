@@ -61,7 +61,7 @@ public:
     /// The current number of items on the stack (aka stack height).
     [[nodiscard]] size_t size() const noexcept
     {
-        return static_cast<size_t>(m_top + 1 - &m_storage[0]);
+        return static_cast<size_t>(m_top + 1 - m_storage.get());
     }
 
     /// Returns the reference to the top item.
