@@ -105,5 +105,11 @@ public:
         // For size == 0, the m_top will point below the storage.
         m_top = m_storage.get() + (size - 1);
     }
+
+    /// Returns iterator to the bottom of the stack.
+    [[nodiscard]] const uint64_t* rbegin() const noexcept { return m_storage.get(); }
+
+    /// Returns end iterator counting from the bottom of the stack.
+    [[nodiscard]] const uint64_t* rend() const noexcept { return m_top + 1; }
 };
 }  // namespace fizzy

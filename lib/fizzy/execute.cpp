@@ -330,13 +330,8 @@ bool invoke_function(const FuncType& func_type, uint32_t func_idx, Instance& ins
 
     const auto num_args = func_type.inputs.size();
     assert(stack.size() >= num_args);
-    std::vector<uint64_t> call_args;
-    if (num_args != 0)
-    {
-        call_args.reserve(num_args);
-        std::copy_n(&stack[num_args - 1], num_args, std::back_inserter(call_args));
-        stack.shrink(stack.size() - num_args);
-    }
+    std::vector<uint64_t> call_args{stack.rend() - num_args, stack.rend()};
+    stack.shrink(stack.size() - num_args);
 
     const auto ret = execute(instance, func_idx, std::move(call_args), depth + 1);
     // Bubble up traps
@@ -1557,10 +1552,7 @@ execution_result execute(
 
 end:
     assert(labels.empty() || trap);
-    // move allows to return derived OperandStack instance into base vector<uint64_t> value
-    return {trap, stack.size() != 0 ?
-                      std::vector<uint64_t>{&stack[stack.size() - 1], &stack[0] + 1} :
-                      std::vector<uint64_t>{}};
+    return {trap, {stack.rbegin(), stack.rend()}};
 }
 
 execution_result execute(const Module& module, FuncIdx func_idx, std::vector<uint64_t> args)
