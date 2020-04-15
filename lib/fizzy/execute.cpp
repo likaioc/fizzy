@@ -159,36 +159,10 @@ void match_imports(const Module& module, const std::vector<ExternalFunction>& im
     const std::vector<ExternalMemory>& imported_memories,
     const std::vector<ExternalGlobal>& imported_globals)
 {
-    std::vector<FuncType> imported_function_types;
-    std::vector<Table> imported_table_types;
-    std::vector<Memory> imported_memory_types;
-    std::vector<bool> imported_globals_mutability;
-    for (auto const& import : module.importsec)
-    {
-        switch (import.kind)
-        {
-        case ExternalKind::Function:
-            assert(import.desc.function_type_index < module.typesec.size());
-            imported_function_types.emplace_back(module.typesec[import.desc.function_type_index]);
-            break;
-        case ExternalKind::Table:
-            imported_table_types.emplace_back(import.desc.table);
-            break;
-        case ExternalKind::Memory:
-            imported_memory_types.emplace_back(import.desc.memory);
-            break;
-        case ExternalKind::Global:
-            imported_globals_mutability.emplace_back(import.desc.global_mutable);
-            break;
-        default:
-            assert(false);
-        }
-    }
-
-    match_imported_functions(imported_function_types, imported_functions);
-    match_imported_tables(imported_table_types, imported_tables);
-    match_imported_memories(imported_memory_types, imported_memories);
-    match_imported_globals(imported_globals_mutability, imported_globals);
+    match_imported_functions(module.imported_function_types, imported_functions);
+    match_imported_tables(module.imported_table_types, imported_tables);
+    match_imported_memories(module.imported_memory_types, imported_memories);
+    match_imported_globals(module.imported_globals_mutability, imported_globals);
 }
 
 table_ptr allocate_table(

@@ -395,6 +395,11 @@ struct Module
     std::vector<Code> codesec;
     // https://webassembly.github.io/spec/core/binary/modules.html#data-section
     std::vector<Data> datasec;
+
+    std::vector<FuncType> imported_function_types;
+    std::vector<Table> imported_table_types;
+    std::vector<Memory> imported_memory_types;
+    std::vector<bool> imported_globals_mutability;
 };
 
 }  // namespace fizzy
