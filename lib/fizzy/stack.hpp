@@ -92,18 +92,15 @@ public:
         return *m_top--;
     }
 
-    /// Shrinks the stack to the given size by dropping item from the top.
+    /// Shrinks the stack to the given new size by dropping items from the top.
     ///
-    /// Requires size <= size().
-    /// shrink(0) clears entire stack and moves the top pointer below the stack base
-    /// (as in constructor) causing pointer arithmetic overflow - this is intended
-    /// and sanitizer checks for such behavior are disabled.
-    [[gnu::no_sanitize("pointer-overflow"), clang::no_sanitize("pointer-overflow")]] void shrink(
-        size_t size) noexcept
+    /// Requires new_size <= size().
+    /// shrink(0) clears entire stack and moves the top pointer below the stack base.
+    void shrink(size_t new_size) noexcept
     {
-        assert(size <= this->size());
-        // For size == 0, the m_top will point below the storage.
-        m_top = m_storage.get() + (size - 1);
+        assert(new_size <= size());
+        // For new_size == 0, the m_top will point below the storage.
+        m_top = m_storage.get() + new_size - 1;
     }
 
     /// Returns iterator to the bottom of the stack.
