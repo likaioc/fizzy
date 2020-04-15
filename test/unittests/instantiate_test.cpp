@@ -168,20 +168,6 @@ TEST(instantiate, imported_table_invalid)
     table_elements table_big(40, 0);
     EXPECT_THROW_MESSAGE(instantiate(module, {}, {{&table_big, {10, 30}}}), instantiate_error,
         "Provided imported table doesn't fit provided limits");
-
-    // Imported table and regular table
-    /* wat2wasm --no-check
-      (table (import "m" "t") 10 30 funcref)
-      (table 10 10 funcref)
-    */
-    const auto bin_with_two_tables =
-        from_hex("0061736d01000000020a01016d01740170010a1e04050170010a0a");
-
-    // TODO this throws validation_error
-    // const auto module_with_two_tables =
-    //     parse(bin_with_two_tables);
-    // EXPECT_THROW_MESSAGE(instantiate(module_with_two_tables, {}, {{&table, {10, 30}}}),
-    //     instantiate_error, "Cannot support more than 1 table section.");
 }
 
 TEST(instantiate, imported_memory)
@@ -299,18 +285,6 @@ TEST(instantiate, imported_memory_invalid)
         instantiate(module_without_max, {}, {}, {{&memory, {1, MemoryPagesLimit + 1}}}),
         instantiate_error,
         "Imported memory limits cannot exceed hard memory limit of 268435456 bytes.");
-
-    // Imported memory and regular memory
-    /* wat2wasm --no-check
-      (memory (import "mod" "m") 1 3)
-      (memory 1 1)
-    */
-    const auto bin_with_two_memories =
-        from_hex("0061736d01000000020b01036d6f64016d02010103050401010101");
-    // TODO this throws validation_error
-    // const auto module_with_two_memories = parse(bin_with_two_memories);
-    // EXPECT_THROW_MESSAGE(instantiate(module_with_two_memories, {}, {}, {{&memory, {1, 3}}}),
-    //     instantiate_error, "Cannot support more than 1 memory section.");
 }
 
 TEST(instantiate, imported_globals)
@@ -447,16 +421,6 @@ TEST(instantiate, memory_single_large_maximum)
 
     EXPECT_THROW_MESSAGE(instantiate(module), instantiate_error,
         "Cannot exceed hard memory limit of 268435456 bytes.");
-}
-
-TEST(instantiate, memory_multiple)
-{
-    Module module;
-    module.memorysec.emplace_back(Memory{{1, 1}});
-    module.memorysec.emplace_back(Memory{{1, 1}});
-
-    EXPECT_THROW_MESSAGE(
-        instantiate(module), instantiate_error, "Cannot support more than 1 memory section.");
 }
 
 TEST(instantiate, element_section)
