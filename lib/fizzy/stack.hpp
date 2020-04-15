@@ -21,7 +21,7 @@ public:
     /// Returns the reference to the top item on the stack.
     ///
     /// This is not currently in use (except unit tests), but left as is classic stack method.
-    T& top() noexcept { return std::vector<T>::back(); }
+    const T& top() const noexcept { return std::vector<T>::back(); }
 
     /// Pops an item from the top of the stack and returns it.
     T pop()
